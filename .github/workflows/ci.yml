@@ -22,7 +22,11 @@ jobs:
       - name: Run tests
         run: npm test
       - name: SonarQube Cloud Scan
-        uses: sonarsource/sonarcloud-github-action
+        uses: sonarsource/sonarcloud-github-action@v2.1.1
+        with:
+            args: >
+              -Dsonar.projectKey=AbhishekCS3459_CI-CD_AWS_Learnings
+              -Dsonar.organization=abhishekcs3459
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
