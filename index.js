@@ -14,7 +14,15 @@ app.use(bodyParser.json())
 app.get('/', (req, res) => {
     res.send('Hello From Server!')
 })
+app.post('/api', (req, res) => {
+    const { name, email, message } = req.body
+    console.log(`Name: ${name}, Email: ${email}, Message: ${message}`)
+    res.status(200).json({ message: 'Data received successfully' })
+}
+)
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`)
 }
 )
+
+module.exports = app
