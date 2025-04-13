@@ -1,4 +1,5 @@
 name: CI/CD Pipeline Using Github Actions
+
 on:
   push:
     branches:
@@ -13,27 +14,55 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Set up Nodejs # setting up Node.js environment 
+
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
+
       - name: Install dependencies
         run: npm install
+
       - name: Run tests
         run: npm test
-      - name: SonarQube Cloud Scan
+
+      - name: SonarCloud Scan
         uses: sonarsource/sonarcloud-github-action@v2.1.1
         with:
-            args: >
-              -Dsonar.projectKey=AbhishekCS3459_CI-CD_AWS_Learnings
-              -Dsonar.organization=abhishekcs3459
+          args: >
+            -Dsonar.projectKey=AbhishekCS3459_CI-CD_AWS_Learnings
+            -Dsonar.organization=abhishekcs3459
         env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
       - name: ✅ Build Successful
         run: echo "🎉 Build and analysis completed successfully!"
-      - name: Build Docker Image 
-        run: docker build -t $GITHUB_SHA .
-       
-      - name: Trivy Scan 
-        run: docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image $GITHUB_SHA 
+
+      - name: Build Docker Image
+        run: |
+          docker build -t actions-app:${{ github.sha }} .
+          docker tag actions-app:${{ github.sha }} ${{ secrets.ECR_REPOSITORY_URI }}/actions-app:latest
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+          docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
+
+      - name: Push Docker Image to Amazon ECR
+        run: |
+          docker push ${{ secrets.ECR_REPOSITORY_URI }}/actions-app:latest
+
+      - name: Trivy Image Scan
+        run: |
+          docker pull aquasec/trivy:latest
+          docker tag ${{ secrets.ECR_REPOSITORY_URI }}/actions-app:latest scanned-image
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:latest image scanned-image
